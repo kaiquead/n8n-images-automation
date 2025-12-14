@@ -1,0 +1,216 @@
+{
+  "name": "Charadas_TikTok",
+  "nodes": [
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        288
+      ],
+      "id": "65037182-89f8-45cf-8689-8cd2b7b62a4a",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "MIFZeafGDCcrhVZM",
+          "name": "Groq account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Você é uma pessoa divertida e é especialista em criar charadas curtas. As charadas são simples, legais e diretas.\nVocê funcionará seguindo as regras descritas\n\n## REGRAS\n\n- crie apenas uma charada\n- precisa ser fácil de ler\n- a resposta também precisa ser curta\n- formato final apenas a charada e a resposta",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -256,
+        16
+      ],
+      "id": "6b83b9d0-fb8a-4b62-9536-616272644530",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "6f0d2d0e-5ad6-4162-9486-567b92a9307b",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -496,
+        16
+      ],
+      "id": "bec26328-d527-4bce-a431-b0898ba51f54",
+      "name": "Webhook",
+      "webhookId": "6f0d2d0e-5ad6-4162-9486-567b92a9307b"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        784,
+        16
+      ],
+      "id": "da6f0d07-7653-4fef-94d1-a566da995360",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-dev",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "image/png"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.requestHuggingFace }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        336,
+        16
+      ],
+      "id": "2d1afa37-cf65-4848-aa45-0a5fe7c6b028",
+      "name": "HTTP Request to Hugging Face",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "nZoQXXwpVSIgfKp9",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  //console.log(typeof(item.json.output))\n  item.json.requestHuggingFace = {\n    \"inputs\": `Crie uma imagem simples em estilo cartoon minimalista, com fundo limpo.\nA imagem deve conter o seguinte texto centralizado em letras grandes e legíveis como um cartaz: ${item.json.output}.\nUse estilo cartoon limpo, cores suaves e tipografia clara. O texto precisa estar vísivel por completo e não pode ser cortado em hipótese nenhuma e precisa ser exatamente o texto da charada`,\n    \"parameters\": {\n      \"guidance_scale\": 8,\n      \"num_inference_steps\": 50\n    }\n  }\n}\n//$input.first().json.output\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        16
+      ],
+      "id": "3a2fcb0c-1b3a-4c99-8ba2-58d2bc49d5c9",
+      "name": "Convert Data for Hugging Face JSON format"
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of $input.all()) {\n  const binary = item.binary?.data;\n\n  item.json = {\n    output: item.json.output,\n    image: binary.data.toString('base64')\n  };\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        16
+      ],
+      "id": "b47986e5-c222-47f4-881f-ff050330b6e6",
+      "name": "Convert PNG to Base64"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Convert Data for Hugging Face JSON format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request to Hugging Face": {
+      "main": [
+        [
+          {
+            "node": "Convert PNG to Base64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Data for Hugging Face JSON format": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request to Hugging Face",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert PNG to Base64": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "416c7973-e947-4300-a6d7-057a745e7794",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "18231a2b229387b0070280c71cf3ebebb956889eba6fca21fe09de4e10dc71f2"
+  },
+  "id": "oXAgG9Po8skpyCcg",
+  "tags": []
+}
