@@ -4,8 +4,6 @@
 
 * João Paulo  
 * Kaique Alves  
-* Pedro Henrique  
-* Roger Allan
 
 ## **Link do front-end (Replit)**:
 https://replit.com/@kaiquead13/Charadinhas?v=1
